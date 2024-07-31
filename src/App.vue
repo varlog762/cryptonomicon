@@ -15,6 +15,7 @@ export default {
   },
   mounted() {
     this.fetchAvailableTickers();
+    this.loadTickersFromLocalStorage();
   },
 
   methods: {
@@ -60,6 +61,15 @@ export default {
       }
     },
 
+    loadTickersFromLocalStorage() {
+      const localTickers = localStorage.getItem('tickerslist');
+
+      if (localTickers) {
+        this.tickers = JSON.parse(localTickers);
+
+      }
+    },
+
     addTickerFromRecomended(tickerName) {
       this.ticker = tickerName.toUpperCase();
 
@@ -77,6 +87,7 @@ export default {
 
       if (!this.checkTickerAdded()) {
         this.tickers.push(currentTicker);
+        localStorage.setItem('tickersList', JSON.stringify(this.tickers));
         this.recomendedTickers = [];
         this.resetError();
 
