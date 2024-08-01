@@ -62,11 +62,11 @@ export default {
     },
 
     loadTickersFromLocalStorage() {
-      const localTickers = localStorage.getItem('tickerslist');
+      const localTickers = localStorage.getItem('tickersList');
 
       if (localTickers) {
         this.tickers = JSON.parse(localTickers);
-
+        this.tickers.forEach(ticker => this.fetchTickerPrice(ticker.name));
       }
     },
 
@@ -76,39 +76,44 @@ export default {
       this.add()
     },
 
-    add() {
+    fetchTickerPrice(tickerName) {
       const apiKey = import.meta.env.VITE_CRYPTOCOMPARE_API_KEY;
 
-      const currentTicker = {
-        name: this.ticker.toUpperCase(),
-        price: "-"
-      };
+      setInterval(async () => {
+        const f = await fetch(
+          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=${apiKey}`
+        );
+        const data = await f.json();
 
+        // currentTicker.price =  data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+        this.tickers.find(t => t.name === tickerName).price =
+          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
 
-      if (!this.checkTickerAdded()) {
-        this.tickers.push(currentTicker);
-        localStorage.setItem('tickersList', JSON.stringify(this.tickers));
-        this.recomendedTickers = [];
-        this.resetError();
+        if (this.sel?.name === tickerName) {
+          this.graph.push(data.USD);
+        }
+      }, 5000);
+    },
 
-        setInterval(async () => {
-          const f = await fetch(
-            `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=${apiKey}`
-          );
-          const data = await f.json();
+    add() {
+      if (this.ticker) {
+        if (!this.checkTickerAdded()) {
+          const currentTicker = {
+            name: this.ticker.toUpperCase(),
+            price: "-"
+          };
 
-          // currentTicker.price =  data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-          this.tickers.find(t => t.name === currentTicker.name).price =
-            data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+          this.tickers.push(currentTicker);
+          localStorage.setItem('tickersList', JSON.stringify(this.tickers));
+          this.recomendedTickers = [];
+          this.resetError();
 
-          if (this.sel?.name === currentTicker.name) {
-            this.graph.push(data.USD);
-          }
-        }, 5000);
+          this.fetchTickerPrice(currentTicker.name);
 
-        this.ticker = "";
-      } else {
-        this.isTickerAdded = true;
+          this.ticker = "";
+        } else {
+          this.isTickerAdded = true;
+        }
       }
     },
 
