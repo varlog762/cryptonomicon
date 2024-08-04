@@ -76,6 +76,16 @@ export default {
     },
     isTickerAlreadyAdded() {
       return this.tickers.some((item) => item.name.toUpperCase() === this.ticker.toUpperCase());
+    },
+    normalizeGraph() {
+      const maxValue = Math.max(...this.graph);
+      const minValue = Math.min(...this.graph);
+
+      if (maxValue === minValue) {
+        return this.graph.map(() => 50);
+      }
+
+      return this.graph.map((price) => 5 + ((price - minValue) * 95) / (maxValue - minValue));
     }
   },
 
@@ -174,21 +184,26 @@ export default {
         }
       }
     },
-
     select(ticker) {
       this.sel = ticker;
       this.graph = [];
     },
-
+    hideGraphWhenTickerWasDeleted(ticker) {
+      if (ticker.name === this.sel.name) {
+        this.sel = null;
+        this.graph = [];
+      }
+    },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
-      localStorage.removeItem(tickerToRemove.toUpperCase());
+      this.hideGraphWhenTickerWasDeleted(tickerToRemove);
+      this.updateLocalStorage();
     },
 
-    normalizeGraph() {
-      const maxValue = Math.max(...this.graph);
-      const minValue = Math.min(...this.graph);
-      return this.graph.map((price) => 5 + ((price - minValue) * 95) / (maxValue - minValue));
+    updateLocalStorage() {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('tickersList', JSON.stringify(this.tickers));
+      }
     }
   },
 
@@ -207,6 +222,11 @@ export default {
         document.title,
         `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
       );
+    },
+    paginatedTickers() {
+      if (!this.paginatedTickers.length) {
+        this.page -= 1;
+      }
     }
   }
 };
@@ -351,7 +371,7 @@ export default {
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ sel.name }} - USD</h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
-            v-for="(bar, idx) in normalizeGraph()"
+            v-for="(bar, idx) in normalizeGraph"
             :key="idx"
             :style="{ height: `${bar}%` }"
             class="bg-purple-800 border w-10"
