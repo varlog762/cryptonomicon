@@ -34,7 +34,7 @@ export default {
       availableTickersFromApi: [],
       recomendedTickers: [],
 
-      sel: null,
+      selectedTicker: null,
       graph: [],
       page: 1,
 
@@ -57,6 +57,12 @@ export default {
   },
 
   computed: {
+    pageStateOptions() {
+      return {
+        filter: this.filter,
+        page: this.page
+      };
+    },
     startTickerIdx() {
       return (this.page - 1) * 6;
     },
@@ -154,11 +160,10 @@ export default {
         );
         const data = await f.json();
 
-        // currentTicker.price =  data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
         this.tickers.find((t) => t.name === tickerName).price =
           data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
 
-        if (this.sel?.name === tickerName) {
+        if (this.selectedTicker?.name === tickerName) {
           this.graph.push(data.USD);
         }
       }, 5000);
@@ -171,8 +176,7 @@ export default {
             price: '-'
           };
 
-          this.tickers.push(currentTicker);
-          localStorage.setItem('tickersList', JSON.stringify(this.tickers));
+          this.tickers = [...this.tickers, currentTicker];
           this.recomendedTickers = [];
           this.resetTickerDuplicateError();
 
@@ -184,47 +188,43 @@ export default {
         }
       }
     },
-    select(ticker) {
-      this.sel = ticker;
-      this.graph = [];
+    selectTicker(ticker) {
+      this.selectedTicker = ticker;
     },
     hideGraphWhenTickerWasDeleted(ticker) {
-      if (ticker.name === this.sel.name) {
-        this.sel = null;
-        this.graph = [];
+      if (this.selectedTicker && ticker.name === this.selectedTicker.name) {
+        this.selectedTicker = null;
       }
     },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
       this.hideGraphWhenTickerWasDeleted(tickerToRemove);
-      this.updateLocalStorage();
-    },
-
-    updateLocalStorage() {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('tickersList', JSON.stringify(this.tickers));
-      }
     }
   },
 
   watch: {
+    tickers() {
+      if (localStorage) {
+        console.log(typeof localStorage);
+        console.log(this.tickers);
+        localStorage.setItem('tickersList', JSON.stringify(this.tickers));
+      }
+    },
+    selectedTicker() {
+      this.graph = [];
+    },
     filter() {
       this.page = 1;
-      window.history.pushState(
-        null,
-        document.title,
-        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
-      );
     },
-    page() {
+    pageStateOptions(value) {
       window.history.pushState(
         null,
         document.title,
-        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+        `${window.location.pathname}?filter=${value.filter}&page=${value.page}`
       );
     },
     paginatedTickers() {
-      if (!this.paginatedTickers.length) {
+      if (!this.paginatedTickers.length && this.page > 1) {
         this.page -= 1;
       }
     }
@@ -332,9 +332,9 @@ export default {
           <div
             v-for="t in paginatedTickers"
             :key="t.name"
-            @click="select(t)"
+            @click="selectTicker(t)"
             :class="{
-              'border-4': sel === t
+              'border-4': selectedTicker === t
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
@@ -367,8 +367,10 @@ export default {
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section v-if="sel" class="relative">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ sel.name }} - USD</h3>
+      <section v-if="selectedTicker" class="relative">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
+          {{ selectedTicker.name }} - USD
+        </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
             v-for="(bar, idx) in normalizeGraph"
@@ -377,7 +379,7 @@ export default {
             class="bg-purple-800 border w-10"
           ></div>
         </div>
-        <button @click="sel = null" type="button" class="absolute top-0 right-0">
+        <button @click="selectedTicker = null" type="button" class="absolute top-0 right-0">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
