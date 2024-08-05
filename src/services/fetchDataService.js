@@ -14,12 +14,14 @@ const fetchData = async (url) => {
 };
 
 export default {
-  async fetchTickerPriceFromApi(tickerName) {
-    const PATH = `/data/price?fsym=${tickerName}&tsyms=USD&api_key=${API_KEY}`;
+  async loadPrices(tickers) {
+    const tickersString = tickers.map((ticker) => ticker.name).join(',');
+
+    const PATH = `/data/pricemulti?fsyms=${tickersString}&tsyms=USD&api_key=${API_KEY}`;
 
     return await fetchData(`${BASE_URL}${PATH}`);
   },
-  async fetchAvailableTickers() {
+  async loadAvailableTickers() {
     try {
       const PATH = '/data/all/coinlist?summary=true';
 

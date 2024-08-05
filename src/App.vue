@@ -39,6 +39,7 @@ export default {
       selectedTicker: null,
       graph: [],
       page: 1,
+      intervalId: null,
 
       isTickerDuplicateError: false
     };
@@ -56,6 +57,9 @@ export default {
     if (windowData.page) {
       this.page = windowData.page;
     }
+  },
+  beforeUnmount() {
+    clearInterval(this.intervalId);
   },
 
   computed: {
@@ -99,7 +103,7 @@ export default {
 
   methods: {
     async getAvailableTickers() {
-      this.availableTickersFromApi = await fetchDataService.fetchAvailableTickers();
+      this.availableTickersFromApi = await fetchDataService.loadAvailableTickers();
     },
     showTickerDuplicateError() {
       this.isTickerDuplicateError = true;
@@ -127,7 +131,6 @@ export default {
 
       if (localTickers) {
         this.tickers = JSON.parse(localTickers);
-        this.tickers.forEach((ticker) => this.getTickerPrice(ticker.name));
       }
     },
     addTickerFromRecomended(tickerName) {
@@ -135,16 +138,30 @@ export default {
 
       this.add();
     },
-    getTickerPrice(tickerName) {
-      setInterval(async () => {
-        const data = await fetchDataService.fetchTickerPriceFromApi(tickerName);
-        this.tickers.find((t) => t.name === tickerName).price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+    getTickerPrices() {
+      clearInterval(this.intervalId);
 
-        if (this.selectedTicker?.name === tickerName) {
-          this.graph.push(data.USD);
-        }
-      }, 5000);
+      this.intervalId = setInterval(async () => {
+        const tickerPrices = await fetchDataService.loadPrices(this.tickers);
+
+        // this.tickers = Object.entries(tickerPrices).map((t) => {
+        //   const price = Object.values(t[1])[0];
+
+        //   return { name: t[0], price: price > 1 ? price.toFixed(2) : price.toPrecision(2) };
+        // });
+
+        const loadedTickersWithPrices = Object.entries(tickerPrices).map((t) => {
+          const price = Object.values(t[1])[0];
+
+          return { name: t[0], price: price > 1 ? price.toFixed(2) : price.toPrecision(2) };
+        });
+
+        this.tickers = this.tickers.map((ticker) => {
+          const matchTicker = loadedTickersWithPrices.find((item) => item.name === ticker.name);
+
+          return matchTicker ? { ...ticker, price: matchTicker.price } : ticker;
+        });
+      }, 1000);
     },
     add() {
       if (this.ticker) {
@@ -157,8 +174,6 @@ export default {
           this.tickers = [...this.tickers, currentTicker];
           this.recomendedTickers = [];
           this.resetTickerDuplicateError();
-
-          this.getTickerPrice(currentTicker.name);
 
           this.ticker = '';
         } else {
@@ -181,10 +196,16 @@ export default {
   },
 
   watch: {
-    tickers() {
-      if (localStorage) {
-        localStorage.setItem('tickersList', JSON.stringify(this.tickers));
-      }
+    tickers: {
+      handler(newTickers, oldTickers) {
+        if (newTickers.length !== oldTickers.length) {
+          this.getTickerPrices();
+          if (localStorage) {
+            localStorage.setItem('tickersList', JSON.stringify(this.tickers));
+          }
+        }
+      },
+      deep: true
     },
     selectedTicker() {
       this.graph = [];
