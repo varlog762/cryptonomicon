@@ -1,4 +1,6 @@
 <script>
+import fetchDataService from './services/fetchDataService';
+
 export default {
   // 1. Наличие в состоянии критических данных. Криточность: 5+
   // 2. Запросы напрямую внутри компонента. Критичность: 5
@@ -42,7 +44,7 @@ export default {
     };
   },
   mounted() {
-    this.fetchAvailableTickers();
+    this.getAvailableTickers();
     this.loadTickersFromLocalStorage();
 
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
@@ -96,26 +98,8 @@ export default {
   },
 
   methods: {
-    async fetchAvailableTickers() {
-      try {
-        const response = await fetch(
-          'https://min-api.cryptocompare.com/data/all/coinlist?summary=true'
-        );
-
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-
-        const responseData = await response.json();
-
-        if (responseData.Data) {
-          this.availableTickersFromApi = Object.values(responseData.Data).map((ticker) => ({
-            symbol: ticker?.Symbol,
-            fullName: ticker.FullName
-          }));
-        }
-      } catch (error) {
-        console.error('Failed to fetch available tickers:', error);
-        this.availableTickersFromApi = [];
-      }
+    async getAvailableTickers() {
+      this.availableTickersFromApi = await fetchDataService.fetchAvailableTickers();
     },
     showTickerDuplicateError() {
       this.isTickerDuplicateError = true;
@@ -143,7 +127,7 @@ export default {
 
       if (localTickers) {
         this.tickers = JSON.parse(localTickers);
-        this.tickers.forEach((ticker) => this.fetchTickerPrice(ticker.name));
+        this.tickers.forEach((ticker) => this.getTickerPrice(ticker.name));
       }
     },
     addTickerFromRecomended(tickerName) {
@@ -151,15 +135,9 @@ export default {
 
       this.add();
     },
-    fetchTickerPrice(tickerName) {
-      const apiKey = import.meta.env.VITE_CRYPTOCOMPARE_API_KEY;
-
+    getTickerPrice(tickerName) {
       setInterval(async () => {
-        const f = await fetch(
-          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=${apiKey}`
-        );
-        const data = await f.json();
-
+        const data = await fetchDataService.fetchTickerPriceFromApi(tickerName);
         this.tickers.find((t) => t.name === tickerName).price =
           data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
 
@@ -180,7 +158,7 @@ export default {
           this.recomendedTickers = [];
           this.resetTickerDuplicateError();
 
-          this.fetchTickerPrice(currentTicker.name);
+          this.getTickerPrice(currentTicker.name);
 
           this.ticker = '';
         } else {
@@ -205,8 +183,6 @@ export default {
   watch: {
     tickers() {
       if (localStorage) {
-        console.log(typeof localStorage);
-        console.log(this.tickers);
         localStorage.setItem('tickersList', JSON.stringify(this.tickers));
       }
     },
