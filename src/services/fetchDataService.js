@@ -1,6 +1,8 @@
 const API_KEY = import.meta.env.VITE_CRYPTOCOMPARE_API_KEY;
 const BASE_URL = 'https://min-api.cryptocompare.com';
 
+const tickers = new Map();
+
 const fetchData = async (url) => {
   try {
     const response = await fetch(url);
@@ -20,9 +22,7 @@ export default {
     const responseData = await fetchData(`${BASE_URL}${PATH}`);
 
     const tickersWithPrices = Object.fromEntries(
-      Object.entries(responseData).map(([name, price]) => {
-        return [name, Object.values(price)[0]];
-      })
+      Object.entries(responseData).map(([name, price]) => [name, Object.values(price)[0]])
     );
 
     return tickersWithPrices;
@@ -44,5 +44,16 @@ export default {
     } catch (error) {
       console.error('Failed to fetch available tickers:', error);
     }
+  },
+  subscribeToTicker(ticker, cb) {
+    const subscribers = tickers.get(ticker) || [];
+    tickers.set(ticker, [...subscribers, cb]);
+  },
+  unsubscribeFromTicker(ticker, cb) {
+    const subscribers = tickers.get(ticker) || [];
+    tickers.set(
+      ticker,
+      subscribers.filter((fn) => fn !== cb)
+    );
   }
 };
