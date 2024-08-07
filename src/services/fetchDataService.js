@@ -14,12 +14,18 @@ const fetchData = async (url) => {
 };
 
 export default {
-  async loadPrices(tickers) {
-    const tickersString = tickers.map((ticker) => ticker.name).join(',');
-
+  async loadPrices(tickersString) {
     const PATH = `/data/pricemulti?fsyms=${tickersString}&tsyms=USD&api_key=${API_KEY}`;
 
-    return await fetchData(`${BASE_URL}${PATH}`);
+    const responseData = await fetchData(`${BASE_URL}${PATH}`);
+
+    const tickersWithPrices = Object.fromEntries(
+      Object.entries(responseData).map(([name, price]) => {
+        return [name, Object.values(price)[0]];
+      })
+    );
+
+    return tickersWithPrices;
   },
   async loadAvailableTickers() {
     try {

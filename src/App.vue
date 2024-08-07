@@ -138,30 +138,25 @@ export default {
 
       this.add();
     },
+    formatPrice(price) {
+      if (typeof price === 'string') {
+        return price;
+      }
+
+      return price > 1 ? price.toFixed(2) : price.toPrecision(2);
+    },
     getTickerPrices() {
-      clearInterval(this.intervalId);
-
       this.intervalId = setInterval(async () => {
-        const tickerPrices = await fetchDataService.loadPrices(this.tickers);
+        const tickerNamesToString = this.tickers.map((ticker) => ticker.name).join(',');
 
-        // this.tickers = Object.entries(tickerPrices).map((t) => {
-        //   const price = Object.values(t[1])[0];
-
-        //   return { name: t[0], price: price > 1 ? price.toFixed(2) : price.toPrecision(2) };
-        // });
-
-        const loadedTickersWithPrices = Object.entries(tickerPrices).map((t) => {
-          const price = Object.values(t[1])[0];
-
-          return { name: t[0], price: price > 1 ? price.toFixed(2) : price.toPrecision(2) };
+        const tickerPrices = await fetchDataService.loadPrices(tickerNamesToString);
+        console.log(tickerPrices);
+        this.tickers.forEach((ticker) => {
+          const price = tickerPrices[ticker.name];
+          console.log(price);
+          ticker.price = price ?? '-';
         });
-
-        this.tickers = this.tickers.map((ticker) => {
-          const matchTicker = loadedTickersWithPrices.find((item) => item.name === ticker.name);
-
-          return matchTicker ? { ...ticker, price: matchTicker.price } : ticker;
-        });
-      }, 1000);
+      }, 5000);
     },
     add() {
       if (this.ticker) {
@@ -199,7 +194,12 @@ export default {
     tickers: {
       handler(newTickers, oldTickers) {
         if (newTickers.length !== oldTickers.length) {
-          this.getTickerPrices();
+          clearInterval(this.intervalId);
+
+          if (newTickers.length) {
+            this.getTickerPrices();
+          }
+
           if (localStorage) {
             localStorage.setItem('tickersList', JSON.stringify(this.tickers));
           }
@@ -338,7 +338,7 @@ export default {
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ t.price }}
+                {{ formatPrice(t.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
