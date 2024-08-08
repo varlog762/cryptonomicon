@@ -16,8 +16,12 @@ const fetchData = async (url) => {
 };
 
 export default {
-  async loadPrices(tickersString) {
-    const PATH = `/data/pricemulti?fsyms=${tickersString}&tsyms=USD&api_key=${API_KEY}`;
+  async loadPrices(tickerNames) {
+    if (Array.isArray(tickerNames)) {
+      tickerNames = tickerNames.join(',');
+    }
+
+    const PATH = `/data/pricemulti?fsyms=${tickerNames}&tsyms=USD&api_key=${API_KEY}`;
 
     const responseData = await fetchData(`${BASE_URL}${PATH}`);
 

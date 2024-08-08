@@ -39,7 +39,6 @@ export default {
       selectedTicker: null,
       graph: [],
       page: 1,
-      intervalId: null,
 
       isTickerDuplicateError: false
     };
@@ -57,6 +56,8 @@ export default {
     if (windowData.page) {
       this.page = windowData.page;
     }
+
+    this.intervalId = setInterval(this.updatePrices, 5000);
   },
   beforeUnmount() {
     clearInterval(this.intervalId);
@@ -87,7 +88,7 @@ export default {
       return this.filteredTickers.length > this.endTickerIdx;
     },
     isTickerAlreadyAdded() {
-      return this.tickers.some((item) => item.name.toUpperCase() === this.ticker.toUpperCase());
+      return this.tickers.some((t) => t.name.toUpperCase() === this.ticker.toUpperCase());
     },
     normalizeGraph() {
       const maxValue = Math.max(...this.graph);
@@ -126,11 +127,24 @@ export default {
         this.recomendedTickers = [];
       }
     },
+    subscribeToTickers() {
+      this.tickers.forEach((ticker) => {
+        fetchDataService.subscribeToTicker(ticker.name, () => {});
+      });
+    },
     loadTickersFromLocalStorage() {
       const localTickers = localStorage.getItem('tickersList');
 
       if (localTickers) {
-        this.tickers = JSON.parse(localTickers);
+        const tickerNames = JSON.parse(localTickers);
+        this.tickers = tickerNames.map((tickerName) => {
+          return {
+            name: tickerName,
+            price: '-'
+          };
+        });
+
+        this.subscribeToTickers();
       }
     },
     addTickerFromRecomended(tickerName) {
@@ -145,18 +159,19 @@ export default {
 
       return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
-    getTickerPrices() {
-      this.intervalId = setInterval(async () => {
-        const tickerNamesToString = this.tickers.map((ticker) => ticker.name).join(',');
+    async updatePrices() {
+      if (!this.tickers.length) {
+        return;
+      }
 
-        const tickerPrices = await fetchDataService.loadPrices(tickerNamesToString);
-        console.log(tickerPrices);
-        this.tickers.forEach((ticker) => {
-          const price = tickerPrices[ticker.name];
-          console.log(price);
-          ticker.price = price ?? '-';
-        });
-      }, 5000);
+      const tickerNamesCollection = this.tickers.map((ticker) => ticker.name);
+
+      const tickerPrices = await fetchDataService.loadPrices(tickerNamesCollection);
+
+      this.tickers.forEach((ticker) => {
+        const price = tickerPrices[ticker.name];
+        ticker.price = price ?? '-';
+      });
     },
     add() {
       if (this.ticker) {
@@ -167,6 +182,7 @@ export default {
           };
 
           this.tickers = [...this.tickers, currentTicker];
+          fetchDataService.subscribeToTicker(this.ticker.name, () => {});
           this.recomendedTickers = [];
           this.resetTickerDuplicateError();
 
@@ -186,26 +202,21 @@ export default {
     },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
+
+      if (!this.isTickerAlreadyAdded) {
+        this.resetTickerDuplicateError();
+      }
+
       this.hideGraphWhenTickerWasDeleted(tickerToRemove);
     }
   },
 
   watch: {
-    tickers: {
-      handler(newTickers, oldTickers) {
-        if (newTickers.length !== oldTickers.length) {
-          clearInterval(this.intervalId);
-
-          if (newTickers.length) {
-            this.getTickerPrices();
-          }
-
-          if (localStorage) {
-            localStorage.setItem('tickersList', JSON.stringify(this.tickers));
-          }
-        }
-      },
-      deep: true
+    tickers() {
+      if (localStorage) {
+        const tickersCollection = this.tickers.map((ticker) => ticker.name);
+        localStorage.setItem('tickersList', JSON.stringify(tickersCollection));
+      }
     },
     selectedTicker() {
       this.graph = [];
