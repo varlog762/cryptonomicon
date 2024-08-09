@@ -1,5 +1,9 @@
 <script>
-import { loadAvailableTickers, subscribeToTicker } from './services/fetchDataService';
+import {
+  loadAvailableTickers,
+  subscribeToTicker,
+  unsubscribeFromTicker
+} from './services/fetchDataService';
 
 export default {
   // 1. Наличие в состоянии критических данных. Криточность: 5+
@@ -165,7 +169,8 @@ export default {
     },
 
     updateTicker(tickerName, newPrice) {
-      this.tickers.filter((t) => t.name === tickerName).forEach((t) => (t.price = newPrice));
+      const tic = this.tickers.filter((t) => t.name === tickerName);
+      tic.forEach((t) => (t.price = newPrice));
     },
 
     add() {
@@ -177,8 +182,8 @@ export default {
           };
 
           this.tickers = [...this.tickers, currentTicker];
-          subscribeToTicker(this.ticker.toUpperCase(), (newPrice) => {
-            this.updateTicker(this.ticker.toUpperCase(), newPrice);
+          subscribeToTicker(currentTicker.name, (newPrice) => {
+            this.updateTicker(currentTicker.name, newPrice);
           });
           this.recomendedTickers = [];
           this.resetTickerDuplicateError();
@@ -206,6 +211,8 @@ export default {
       if (!this.isTickerAlreadyAdded) {
         this.resetTickerDuplicateError();
       }
+
+      unsubscribeFromTicker(tickerToRemove.name);
 
       this.hideGraphWhenTickerWasDeleted(tickerToRemove);
     }
