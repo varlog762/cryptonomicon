@@ -15,49 +15,54 @@ const fetchData = async (url) => {
   }
 };
 
-export default {
-  async loadPrices(tickerNames) {
-    if (Array.isArray(tickerNames)) {
-      tickerNames = tickerNames.join(',');
-    }
+const loadPrices = async (tickerNames) => {
+  if (Array.isArray(tickerNames)) {
+    tickerNames = tickerNames.join(',');
+  }
 
-    const PATH = `/data/pricemulti?fsyms=${tickerNames}&tsyms=USD&api_key=${API_KEY}`;
+  const PATH = `/data/pricemulti?fsyms=${tickerNames}&tsyms=USD&api_key=${API_KEY}`;
+
+  const responseData = await fetchData(`${BASE_URL}${PATH}`);
+
+  const tickersWithPrices = Object.fromEntries(
+    Object.entries(responseData).map(([name, price]) => [name, Object.values(price)[0]])
+  );
+
+  return tickersWithPrices;
+};
+
+export const loadAvailableTickers = async () => {
+  try {
+    const PATH = '/data/all/coinlist?summary=true';
 
     const responseData = await fetchData(`${BASE_URL}${PATH}`);
 
-    const tickersWithPrices = Object.fromEntries(
-      Object.entries(responseData).map(([name, price]) => [name, Object.values(price)[0]])
-    );
-
-    return tickersWithPrices;
-  },
-  async loadAvailableTickers() {
-    try {
-      const PATH = '/data/all/coinlist?summary=true';
-
-      const responseData = await fetchData(`${BASE_URL}${PATH}`);
-
-      if (responseData.Data) {
-        return Object.values(responseData.Data).map((ticker) => ({
-          symbol: ticker?.Symbol,
-          fullName: ticker?.FullName
-        }));
-      }
-
-      throw new Error('Bad response');
-    } catch (error) {
-      console.error('Failed to fetch available tickers:', error);
+    if (responseData.Data) {
+      return Object.values(responseData.Data).map((ticker) => ({
+        symbol: ticker?.Symbol,
+        fullName: ticker?.FullName
+      }));
     }
-  },
-  subscribeToTicker(ticker, cb) {
-    const subscribers = tickers.get(ticker) || [];
-    tickers.set(ticker, [...subscribers, cb]);
-  },
-  unsubscribeFromTicker(ticker, cb) {
-    const subscribers = tickers.get(ticker) || [];
-    tickers.set(
-      ticker,
-      subscribers.filter((fn) => fn !== cb)
-    );
+
+    throw new Error('Bad response');
+  } catch (error) {
+    console.error('Failed to fetch available tickers:', error);
   }
 };
+
+export const subscribeToTicker = (ticker, cb) => {
+  const subscribers = tickers.get(ticker) || [];
+  tickers.set(ticker, [...subscribers, cb]);
+};
+
+export const unsubscribeFromTicker = (ticker, cb) => {
+  const subscribers = tickers.get(ticker) || [];
+  tickers.set(
+    ticker,
+    subscribers.filter((fn) => fn !== cb)
+  );
+};
+
+setInterval(loadPrices, 5000);
+
+window.tickers = tickers;

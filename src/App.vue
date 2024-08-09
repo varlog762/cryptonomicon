@@ -1,5 +1,5 @@
 <script>
-import fetchDataService from './services/fetchDataService';
+import { loadAvailableTickers, subscribeToTicker } from './services/fetchDataService';
 
 export default {
   // 1. Наличие в состоянии критических данных. Криточность: 5+
@@ -57,10 +57,10 @@ export default {
       this.page = windowData.page;
     }
 
-    this.intervalId = setInterval(this.updatePrices, 5000);
+    // this.intervalId = setInterval(this.updatePrices, 5000);
   },
   beforeUnmount() {
-    clearInterval(this.intervalId);
+    // clearInterval(this.intervalId);
   },
 
   computed: {
@@ -104,7 +104,7 @@ export default {
 
   methods: {
     async getAvailableTickers() {
-      this.availableTickersFromApi = await fetchDataService.loadAvailableTickers();
+      this.availableTickersFromApi = await loadAvailableTickers();
     },
     showTickerDuplicateError() {
       this.isTickerDuplicateError = true;
@@ -129,7 +129,7 @@ export default {
     },
     subscribeToTickers() {
       this.tickers.forEach((ticker) => {
-        fetchDataService.subscribeToTicker(ticker.name, () => {});
+        subscribeToTicker(ticker.name, () => {});
       });
     },
     loadTickersFromLocalStorage() {
@@ -160,18 +160,15 @@ export default {
       return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
     async updatePrices() {
-      if (!this.tickers.length) {
-        return;
-      }
-
-      const tickerNamesCollection = this.tickers.map((ticker) => ticker.name);
-
-      const tickerPrices = await fetchDataService.loadPrices(tickerNamesCollection);
-
-      this.tickers.forEach((ticker) => {
-        const price = tickerPrices[ticker.name];
-        ticker.price = price ?? '-';
-      });
+      // if (!this.tickers.length) {
+      //   return;
+      // }
+      // const tickerNamesCollection = this.tickers.map((ticker) => ticker.name);
+      // const tickerPrices = await loadPrices(tickerNamesCollection);
+      // this.tickers.forEach((ticker) => {
+      //   const price = tickerPrices[ticker.name];
+      //   ticker.price = price ?? '-';
+      // });
     },
     add() {
       if (this.ticker) {
@@ -182,7 +179,7 @@ export default {
           };
 
           this.tickers = [...this.tickers, currentTicker];
-          fetchDataService.subscribeToTicker(this.ticker.name, () => {});
+          subscribeToTicker(this.ticker.name, () => {});
           this.recomendedTickers = [];
           this.resetTickerDuplicateError();
 
