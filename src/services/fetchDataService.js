@@ -1,7 +1,7 @@
 const API_KEY = import.meta.env.VITE_CRYPTOCOMPARE_API_KEY;
 const BASE_URL = 'https://min-api.cryptocompare.com';
 
-const tickers = new Map();
+const tickersHandlers = new Map();
 
 const fetchData = async (url) => {
   try {
@@ -15,20 +15,23 @@ const fetchData = async (url) => {
   }
 };
 
-const loadPrices = async (tickerNames) => {
-  if (Array.isArray(tickerNames)) {
-    tickerNames = tickerNames.join(',');
+const loadPrices = async () => {
+  if (!tickersHandlers.size) {
+    return;
   }
 
-  const PATH = `/data/pricemulti?fsyms=${tickerNames}&tsyms=USD&api_key=${API_KEY}`;
+  const PATH = `/data/pricemulti?fsyms=${Array.from(tickersHandlers.keys()).join(',')}&tsyms=USD&api_key=${API_KEY}`;
 
   const responseData = await fetchData(`${BASE_URL}${PATH}`);
 
-  const tickersWithPrices = Object.fromEntries(
+  const updatedPrices = Object.fromEntries(
     Object.entries(responseData).map(([name, price]) => [name, Object.values(price)[0]])
   );
 
-  return tickersWithPrices;
+  Object.entries(updatedPrices).forEach(([tickerName, price]) => {
+    const handlers = tickersHandlers.get(tickerName) || [];
+    handlers.forEach((fn) => fn(price));
+  });
 };
 
 export const loadAvailableTickers = async () => {
@@ -51,13 +54,13 @@ export const loadAvailableTickers = async () => {
 };
 
 export const subscribeToTicker = (ticker, cb) => {
-  const subscribers = tickers.get(ticker) || [];
-  tickers.set(ticker, [...subscribers, cb]);
+  const subscribers = tickersHandlers.get(ticker) || [];
+  tickersHandlers.set(ticker, [...subscribers, cb]);
 };
 
 export const unsubscribeFromTicker = (ticker, cb) => {
-  const subscribers = tickers.get(ticker) || [];
-  tickers.set(
+  const subscribers = tickersHandlers.get(ticker) || [];
+  tickersHandlers.set(
     ticker,
     subscribers.filter((fn) => fn !== cb)
   );
@@ -65,4 +68,4 @@ export const unsubscribeFromTicker = (ticker, cb) => {
 
 setInterval(loadPrices, 5000);
 
-window.tickers = tickers;
+window.tickers = tickersHandlers;

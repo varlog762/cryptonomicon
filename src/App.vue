@@ -56,11 +56,6 @@ export default {
     if (windowData.page) {
       this.page = windowData.page;
     }
-
-    // this.intervalId = setInterval(this.updatePrices, 5000);
-  },
-  beforeUnmount() {
-    // clearInterval(this.intervalId);
   },
 
   computed: {
@@ -106,12 +101,15 @@ export default {
     async getAvailableTickers() {
       this.availableTickersFromApi = await loadAvailableTickers();
     },
+
     showTickerDuplicateError() {
       this.isTickerDuplicateError = true;
     },
+
     resetTickerDuplicateError() {
       this.isTickerDuplicateError = false;
     },
+
     searchInAvailableTickers() {
       this.resetTickerDuplicateError();
 
@@ -127,11 +125,15 @@ export default {
         this.recomendedTickers = [];
       }
     },
+
     subscribeToTickers() {
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, () => {});
+        subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => {
+          this.updateTicker(ticker.name.toUpperCase(), newPrice);
+        });
       });
     },
+
     loadTickersFromLocalStorage() {
       const localTickers = localStorage.getItem('tickersList');
 
@@ -147,11 +149,13 @@ export default {
         this.subscribeToTickers();
       }
     },
+
     addTickerFromRecomended(tickerName) {
       this.ticker = tickerName.toUpperCase();
 
       this.add();
     },
+
     formatPrice(price) {
       if (typeof price === 'string') {
         return price;
@@ -159,17 +163,11 @@ export default {
 
       return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
-    async updatePrices() {
-      // if (!this.tickers.length) {
-      //   return;
-      // }
-      // const tickerNamesCollection = this.tickers.map((ticker) => ticker.name);
-      // const tickerPrices = await loadPrices(tickerNamesCollection);
-      // this.tickers.forEach((ticker) => {
-      //   const price = tickerPrices[ticker.name];
-      //   ticker.price = price ?? '-';
-      // });
+
+    updateTicker(tickerName, newPrice) {
+      this.tickers.filter((t) => t.name === tickerName).forEach((t) => (t.price = newPrice));
     },
+
     add() {
       if (this.ticker) {
         if (!this.isTickerAlreadyAdded) {
@@ -179,7 +177,9 @@ export default {
           };
 
           this.tickers = [...this.tickers, currentTicker];
-          subscribeToTicker(this.ticker.name, () => {});
+          subscribeToTicker(this.ticker.toUpperCase(), (newPrice) => {
+            this.updateTicker(this.ticker.toUpperCase(), newPrice);
+          });
           this.recomendedTickers = [];
           this.resetTickerDuplicateError();
 
@@ -189,14 +189,17 @@ export default {
         }
       }
     },
+
     selectTicker(ticker) {
       this.selectedTicker = ticker;
     },
+
     hideGraphWhenTickerWasDeleted(ticker) {
       if (this.selectedTicker && ticker.name === this.selectedTicker.name) {
         this.selectedTicker = null;
       }
     },
+
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
 
@@ -215,12 +218,15 @@ export default {
         localStorage.setItem('tickersList', JSON.stringify(tickersCollection));
       }
     },
+
     selectedTicker() {
       this.graph = [];
     },
+
     filter() {
       this.page = 1;
     },
+
     pageStateOptions(value) {
       window.history.pushState(
         null,
@@ -228,6 +234,7 @@ export default {
         `${window.location.pathname}?filter=${value.filter}&page=${value.page}`
       );
     },
+
     paginatedTickers() {
       if (!this.paginatedTickers.length && this.page > 1) {
         this.page -= 1;
