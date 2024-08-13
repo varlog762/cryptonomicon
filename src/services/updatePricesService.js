@@ -17,7 +17,7 @@ socket.addEventListener('message', (e) => {
   }
 });
 
-const togleSubscribeToTickerOnWs = (ticker, action) => {
+const toggleSubscribeToTickerOnWs = (ticker, action) => {
   const message = JSON.stringify({
     action: action,
     subs: [`5~CCCAGG~${ticker}~USD`]
@@ -42,12 +42,12 @@ const tickersHandlers = new Map();
 export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHandlers.get(ticker) || [];
   tickersHandlers.set(ticker, [...subscribers, cb]);
-  togleSubscribeToTickerOnWs(ticker, ADD_SUBSCRIBE_ACTION);
+  toggleSubscribeToTickerOnWs(ticker, ADD_SUBSCRIBE_ACTION);
 };
 
 export const unsubscribeFromTicker = (ticker) => {
   tickersHandlers.delete(ticker);
-  togleSubscribeToTickerOnWs(ticker, REMOVE_SUBSCRIBE_ACTION);
+  toggleSubscribeToTickerOnWs(ticker, REMOVE_SUBSCRIBE_ACTION);
 };
 
 window.tickers = tickersHandlers;

@@ -166,8 +166,14 @@ export default {
     },
 
     updateTicker(tickerName, newPrice) {
-      const tic = this.tickers.filter((t) => t.name === tickerName);
-      tic.forEach((t) => (t.price = newPrice));
+      const filteredTickers = this.tickers.filter((t) => t.name === tickerName);
+      filteredTickers.forEach((t) => {
+        if (t === this.selectedTicker) {
+          this.graph.push(newPrice);
+        }
+
+        t.price = newPrice;
+      });
     },
 
     add() {
