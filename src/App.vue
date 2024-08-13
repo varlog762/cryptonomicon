@@ -1,9 +1,6 @@
 <script>
-import {
-  loadAvailableTickers,
-  subscribeToTicker,
-  unsubscribeFromTicker
-} from './services/fetchDataService';
+import { subscribeToTicker, unsubscribeFromTicker } from './services/updatePricesService';
+import { loadAvailableTickers } from '@/services/loadAvailableTickersService';
 
 export default {
   // 1. Наличие в состоянии критических данных. Криточность: 5+
