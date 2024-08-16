@@ -1,4 +1,4 @@
-const BASE_URL = 'https://min-api.cryptocompare.com';
+import C from '@/constants/constants';
 
 const fetchData = async (url) => {
   try {
@@ -14,7 +14,7 @@ const fetchData = async (url) => {
 
 export const loadAvailableTickers = async () => {
   try {
-    const responseData = await fetchData(`${BASE_URL}/data/all/coinlist?summary=true`);
+    const responseData = await fetchData(`${C.BASE_URL_API}/data/all/coinlist?summary=true`);
 
     if (responseData.Data) {
       return Object.values(responseData.Data).map((ticker) => ({

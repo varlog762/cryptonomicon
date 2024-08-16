@@ -1,4 +1,5 @@
 <script>
+import C from '@/constants/constants';
 import { subscribeToTicker, unsubscribeFromTicker } from './services/updatePricesService';
 import { loadAvailableTickers } from '@/services/loadAvailableTickersService';
 
@@ -171,6 +172,13 @@ export default {
       filteredTickers.forEach((t) => {
         if (t === this.selectedTicker && typeof newPrice === 'number') {
           this.graph.push(newPrice);
+        }
+
+        if (newPrice === C.UNKNOWN_TICKER_PRICE) {
+          t.price = '-';
+          t.isUnknownTicker = true;
+
+          return;
         }
 
         t.price = newPrice;
