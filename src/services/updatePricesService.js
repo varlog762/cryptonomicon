@@ -1,19 +1,29 @@
-const API_KEY = import.meta.env.VITE_CRYPTOCOMPARE_API_KEY;
-const BASE_URL = 'wss://streamer.cryptocompare.com';
-const AGGREGATE_INDEX = '5';
-const ADD_SUBSCRIBE_ACTION = 'SubAdd';
-const REMOVE_SUBSCRIBE_ACTION = 'SubRemove';
+import C from '@/constants/constants';
 
 //DATA LOADING VIA HTTP IMPLEMENTED IN 'load-data-via-http' BRANCH!!!
 
-const socket = new WebSocket(`${BASE_URL}/v2?api_key=${API_KEY}`);
+const socket = new WebSocket(`${C.BASE_URL_WS}/v2?api_key=${C.API_KEY}`);
 
 socket.addEventListener('message', (e) => {
-  const { TYPE: type, FROMSYMBOL: currency, PRICE: price } = JSON.parse(e.data);
+  const {
+    TYPE: type,
+    FROMSYMBOL: fromSymbol,
+    PRICE: price,
+    INFO: errorInfo,
+    PARAMETER: param
+  } = JSON.parse(e.data);
 
-  if (type === AGGREGATE_INDEX) {
-    const handlers = tickersHandlers.get(currency) || [];
-    handlers.forEach((fn) => fn(price));
+  let newPrice = price;
+  let currency = fromSymbol;
+
+  if (type === C.BAD_RESPONSE_TYPE && !errorInfo.includes('pair')) {
+    newPrice = C.UNKNOWN_TICKER_PRICE;
+    currency = param.split('~').at(2);
+  }
+
+  if (newPrice) {
+    const handlers = tickersHandlers.get(currency);
+    handlers.forEach((fn) => fn(newPrice));
   }
 });
 
@@ -42,12 +52,12 @@ const tickersHandlers = new Map();
 export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHandlers.get(ticker) || [];
   tickersHandlers.set(ticker, [...subscribers, cb]);
-  toggleSubscribeToTickerOnWs(ticker, ADD_SUBSCRIBE_ACTION);
+  toggleSubscribeToTickerOnWs(ticker, C.ADD_SUBSCRIBE_ACTION);
 };
 
 export const unsubscribeFromTicker = (ticker) => {
   tickersHandlers.delete(ticker);
-  toggleSubscribeToTickerOnWs(ticker, REMOVE_SUBSCRIBE_ACTION);
+  toggleSubscribeToTickerOnWs(ticker, C.REMOVE_SUBSCRIBE_ACTION);
 };
 
 window.tickers = tickersHandlers;

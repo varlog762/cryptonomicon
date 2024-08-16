@@ -129,8 +129,9 @@ export default {
 
     subscribeToTickers() {
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => {
-          this.updateTicker(ticker.name.toUpperCase(), newPrice);
+        const tickerName = ticker.name.toUpperCase();
+        subscribeToTicker(tickerName, (newPrice) => {
+          this.updateTicker(tickerName, newPrice);
         });
       });
     },
@@ -168,7 +169,7 @@ export default {
     updateTicker(tickerName, newPrice) {
       const filteredTickers = this.tickers.filter((t) => t.name === tickerName);
       filteredTickers.forEach((t) => {
-        if (t === this.selectedTicker) {
+        if (t === this.selectedTicker && typeof newPrice === 'number') {
           this.graph.push(newPrice);
         }
 
