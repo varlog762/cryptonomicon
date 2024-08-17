@@ -41,7 +41,6 @@ socket.addEventListener('message', (e) => {
 
   if (newPrice) {
     const currencyPair = getMapKeyFromTickerName(currency);
-    console.log(currencyPair);
 
     const handlers = tickersHandlers.get(currencyPair);
     handlers.forEach((fn) => fn(newPrice));
@@ -53,8 +52,8 @@ const createMessageToWebSocket = (action, firstCurrency, secondCurrency = C.USD)
   subs: [`5~CCCAGG~${firstCurrency}~${secondCurrency}`]
 });
 
-const toggleSubscribeToTickerOnWs = (message) => {
-  const stringifiedMessage = JSON.stringify(message);
+const toggleSubscribeToTickerOnWs = (messageToWebSocket) => {
+  const stringifiedMessage = JSON.stringify(messageToWebSocket);
 
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(stringifiedMessage);
@@ -80,16 +79,16 @@ const getMapKeyFromTickerName = (tickerName) => {
     .at(0);
 };
 
-export const subscribeToTicker = (ticker, cb) => {
-  const tickersPair = {
-    [ticker]: C.USD
+export const subscribeToTicker = (tickerName, cb) => {
+  const currencyPair = {
+    [tickerName]: C.USD
   };
 
-  const subscribers = tickersHandlers.get(tickersPair) || [];
-  tickersHandlers.set(tickersPair, [...subscribers, cb]);
+  const subscribers = tickersHandlers.get(currencyPair) || [];
+  tickersHandlers.set(currencyPair, [...subscribers, cb]);
 
-  const message = createMessageToWebSocket(C.ADD_SUBSCRIBE_ACTION, ticker);
-  toggleSubscribeToTickerOnWs(message);
+  const messageToWebSocket = createMessageToWebSocket(C.ADD_SUBSCRIBE_ACTION, tickerName);
+  toggleSubscribeToTickerOnWs(messageToWebSocket);
 };
 
 export const unsubscribeFromTicker = (tickerName) => {
@@ -98,13 +97,13 @@ export const unsubscribeFromTicker = (tickerName) => {
   const [firstCurrency, secondCurrency] = Object.entries(currencyPair)[0];
   tickersHandlers.delete(currencyPair);
 
-  const message = createMessageToWebSocket(
+  const messageToWebSocket = createMessageToWebSocket(
     C.REMOVE_SUBSCRIBE_ACTION,
     firstCurrency,
     secondCurrency
   );
 
-  toggleSubscribeToTickerOnWs(message);
+  toggleSubscribeToTickerOnWs(messageToWebSocket);
 };
 
 window.tickers = tickersHandlers;
