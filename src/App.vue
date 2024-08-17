@@ -1,5 +1,4 @@
 <script>
-import C from '@/constants/constants';
 import { subscribeToTicker, unsubscribeFromTicker } from './services/updatePricesService';
 import { loadAvailableTickers } from '@/services/loadAvailableTickersService';
 
@@ -174,13 +173,6 @@ export default {
           this.graph.push(newPrice);
         }
 
-        if (newPrice === C.UNKNOWN_TICKER_PRICE) {
-          t.price = '-';
-          t.isUnknownTicker = true;
-
-          return;
-        }
-
         t.price = newPrice;
       });
     },
@@ -227,6 +219,10 @@ export default {
       unsubscribeFromTicker(tickerToRemove.name);
 
       this.hideGraphWhenTickerWasDeleted(tickerToRemove);
+    },
+
+    isValidPrice(ticker) {
+      return typeof ticker.price === 'number';
     }
   },
 
@@ -369,7 +365,7 @@ export default {
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
-            <div class="px-4 py-5 sm:p-6 text-center">
+            <div class="px-4 py-5 sm:p-6 text-center" :class="{ 'bg-red-100': !isValidPrice(t) }">
               <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
                 {{ formatPrice(t.price) }}
