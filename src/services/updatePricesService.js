@@ -2,55 +2,52 @@ import C from '@/constants/constants';
 
 //DATA LOADING VIA HTTP IMPLEMENTED IN 'load-data-via-http' BRANCH!!!
 
-const sharedWorker = new SharedWorker('sharedWorker.js');
+const sharedWorker = new SharedWorker(new URL('../workers/sharedWorker.js', import.meta.url));
+sharedWorker.port.start();
 
 sharedWorker.port.addEventListener('message', (e) => {
-  e;
-  // const {
-  //   TYPE: type,
-  //   FROMSYMBOL: fromSymbol,
-  //   PRICE: price,
-  //   INFO: errorInfo,
-  //   PARAMETER: param
-  // } = JSON.parse(e.data);
-  // let newPrice = price;
-  // let currency = fromSymbol;
-  // if (type === C.BAD_RESPONSE_TYPE) {
-  //   newPrice = '-';
-  //   currency = param.split('~').at(2);
-  //   if (errorInfo.includes('pair')) {
-  //     const removeUsdSubscribeMessage = createMessageToWebSocket(
-  //       C.REMOVE_SUBSCRIBE_ACTION,
-  //       currency,
-  //       C.USD
-  //     );
-  //     const addUsdtSubscribeMessage = createMessageToWebSocket(
-  //       C.ADD_SUBSCRIBE_ACTION,
-  //       currency,
-  //       C.USDT
-  //     );
-  //     toggleSubscribeToTickerOnWs(removeUsdSubscribeMessage);
-  //     toggleSubscribeToTickerOnWs(addUsdtSubscribeMessage);
-  //     return;
-  //   }
-  // }
-  // if (newPrice) {
-  //   const currencyPair = getMapKeyFromTickerName(currency);
-  //   const handlers = tickersHandlers.get(currencyPair);
-  //   handlers.forEach((fn) => fn(newPrice));
-  // }
+  const {
+    TYPE: type,
+    FROMSYMBOL: fromSymbol,
+    PRICE: price,
+    INFO: errorInfo,
+    PARAMETER: param
+  } = JSON.parse(e.data);
+  let newPrice = price;
+  let currency = fromSymbol;
+  if (type === C.BAD_RESPONSE_TYPE) {
+    newPrice = '-';
+    currency = param.split('~').at(2);
+    if (errorInfo.includes('pair')) {
+      const removeUsdSubscribeMessage = createMessageToWebSocket(
+        C.REMOVE_SUBSCRIBE_ACTION,
+        currency,
+        C.USD
+      );
+      const addUsdtSubscribeMessage = createMessageToWebSocket(
+        C.ADD_SUBSCRIBE_ACTION,
+        currency,
+        C.USDT
+      );
+      sharedWorker.port.postMessage(removeUsdSubscribeMessage);
+      sharedWorker.port.postMessage(addUsdtSubscribeMessage);
+      return;
+    }
+  }
+  if (newPrice) {
+    const currencyPair = getMapKeyFromTickerName(currency);
+    const handlers = tickersHandlers.get(currencyPair);
+    handlers.forEach((fn) => fn(newPrice));
+  }
 });
 
-const createMessageToWebSocket = (action, firstCurrency, secondCurrency = C.USD) => ({
-  action: action,
-  subs: [`5~CCCAGG~${firstCurrency}~${secondCurrency}`]
-});
+const createMessageToWebSocket = (action, firstCurrency, secondCurrency = C.USD) => {
+  const message = {
+    action: action,
+    subs: [`5~CCCAGG~${firstCurrency}~${secondCurrency}`]
+  };
 
-const toggleSubscribeToTickerOnWs = (messageToWebSocket) => {
-  const stringifiedMessage = JSON.stringify(messageToWebSocket);
-
-  sharedWorker.port.postMessage(stringifiedMessage);
-  console.log(stringifiedMessage);
+  return JSON.stringify(message);
 };
 
 const tickersHandlers = new Map();
@@ -72,7 +69,7 @@ export const subscribeToTicker = (tickerName, cb) => {
   tickersHandlers.set(currencyPair, [...subscribers, cb]);
 
   const messageToWebSocket = createMessageToWebSocket(C.ADD_SUBSCRIBE_ACTION, tickerName);
-  toggleSubscribeToTickerOnWs(messageToWebSocket);
+  sharedWorker.port.postMessage(messageToWebSocket);
 };
 
 export const unsubscribeFromTicker = (tickerName) => {
@@ -86,8 +83,7 @@ export const unsubscribeFromTicker = (tickerName) => {
     firstCurrency,
     secondCurrency
   );
-
-  toggleSubscribeToTickerOnWs(messageToWebSocket);
+  sharedWorker.port.postMessage(messageToWebSocket);
 };
 
 window.tickers = tickersHandlers;

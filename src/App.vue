@@ -1,4 +1,5 @@
 <script>
+import '@/services/connectToWebSocket';
 import { subscribeToTicker, unsubscribeFromTicker } from './services/updatePricesService';
 import { loadAvailableTickers } from '@/services/loadAvailableTickersService';
 
