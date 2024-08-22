@@ -36,7 +36,7 @@ sharedWorker.port.addEventListener('message', (e) => {
   }
   if (newPrice) {
     const currencyPair = getMapKeyFromTickerName(currency);
-    const handlers = tickersHandlers.get(currencyPair);
+    const handlers = tickersHandlers.get(currencyPair) || [];
     handlers.forEach((fn) => fn(newPrice));
   }
 });

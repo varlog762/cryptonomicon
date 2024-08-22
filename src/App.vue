@@ -40,6 +40,7 @@ export default {
 
       selectedTicker: null,
       graph: [],
+      maxGraphElements: 1,
       page: 1,
 
       isTickerDuplicateError: false
@@ -48,6 +49,8 @@ export default {
   mounted() {
     this.getAvailableTickers();
     this.loadTickersFromLocalStorage();
+
+    window.addEventListener('resize', this.calculateMaxGraphElements);
 
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
 
@@ -58,6 +61,10 @@ export default {
     if (windowData.page) {
       this.page = windowData.page;
     }
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('resize', this.calculateMaxGraphElements);
   },
 
   computed: {
@@ -100,6 +107,16 @@ export default {
   },
 
   methods: {
+    calculateMaxGraphElements() {
+      if (!this.$refs.graph || !this.$refs.graphElement[0]) {
+        return;
+      }
+
+      this.maxGraphElements = Math.floor(
+        this.$refs.graph.clientWidth / this.$refs.graphElement[0].offsetWidth
+      );
+    },
+
     async getAvailableTickers() {
       this.availableTickersFromApi = await loadAvailableTickers();
     },
@@ -172,6 +189,8 @@ export default {
       filteredTickers.forEach((t) => {
         if (t === this.selectedTicker && typeof newPrice === 'number') {
           this.graph.push(newPrice);
+
+          this.correctGraphElementsCount();
         }
 
         t.price = newPrice;
@@ -224,10 +243,22 @@ export default {
 
     isValidPrice(ticker) {
       return typeof ticker.price === 'number';
+    },
+
+    correctGraphElementsCount() {
+      if (this.graph.length > this.maxGraphElements) {
+        const startIdx = this.graph.length - this.maxGraphElements;
+
+        this.graph = this.graph.slice(startIdx);
+      }
     }
   },
 
   watch: {
+    maxGraphElements() {
+      this.correctGraphElementsCount();
+    },
+
     tickers() {
       if (localStorage) {
         const tickersCollection = this.tickers.map((ticker) => ticker.name);
@@ -399,12 +430,13 @@ export default {
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div class="flex items-end border-gray-600 border-b border-l h-64" ref="graph">
           <div
+            ref="graphElement"
             v-for="(bar, idx) in normalizeGraph"
             :key="idx"
             :style="{ height: `${bar}%` }"
-            class="bg-purple-800 border w-10"
+            class="bg-purple-800 border w-10 shrink-0"
           ></div>
         </div>
         <button @click="selectedTicker = null" type="button" class="absolute top-0 right-0">
