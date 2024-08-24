@@ -1,24 +1,12 @@
 <script>
 import '@/services/connectToWebSocket';
 import { subscribeToTicker, unsubscribeFromTicker } from './services/updatePricesService';
-import { loadAvailableTickers } from '@/services/loadAvailableTickersService';
 
-import PlusSignIconComponent from './components/PlusSignIconComponent.vue';
+import AddTickerComponent from './components/AddTickerComponent.vue';
 import CloseButtonIconComponent from './components/CloseButtonIconComponent.vue';
 import TrashIconComponent from './components/TrashIconComponent.vue';
 
 export default {
-  // 1. Наличие в состоянии критических данных. Криточность: 5+
-  // 2. Запросы напрямую внутри компонента. Критичность: 5
-  // 3. При удалении тикера остается подписка на загрузку прайса. Критичность: 5
-  // 4. Обработка ошибок API. Критичность 5
-  // 5. Большое количество запросов. Критичность: 4
-  // 6. При удалении тикера не обновляется localStorage. Критичность: 4
-  // 7. Повторяющийся код в watch. Критичность: 3
-  // 8. localStorage и анонимные вкладки. Критичность: 3
-  // 9. Внешний вид графика при большом количестве цен. Критичность: 2
-  // 10.Магические числа/строки. Критичность: 1
-
   /**
    * Критерии оценки критичности проблемы:
    * 1. Проблема может уронить приложение - 5
@@ -34,7 +22,7 @@ export default {
   name: 'App',
 
   components: {
-    PlusSignIconComponent,
+    AddTickerComponent,
     CloseButtonIconComponent,
     TrashIconComponent
   },
@@ -45,8 +33,6 @@ export default {
       filter: '',
 
       tickers: [],
-      availableTickersFromApi: [],
-      recomendedTickers: [],
 
       selectedTicker: null,
       graph: [],
@@ -57,7 +43,6 @@ export default {
     };
   },
   mounted() {
-    this.getAvailableTickers();
     this.loadTickersFromLocalStorage();
 
     window.addEventListener('resize', this.calculateMaxGraphElements);
@@ -101,9 +86,6 @@ export default {
     hasNextPage() {
       return this.filteredTickers.length > this.endTickerIdx;
     },
-    isTickerAlreadyAdded() {
-      return this.tickers.some((t) => t.name.toUpperCase() === this.ticker.toUpperCase());
-    },
     normalizeGraph() {
       const maxValue = Math.max(...this.graph);
       const minValue = Math.min(...this.graph);
@@ -113,6 +95,9 @@ export default {
       }
 
       return this.graph.map((price) => 5 + ((price - minValue) * 95) / (maxValue - minValue));
+    },
+    isTickerAlreadyAdded() {
+      return this.tickers.some((t) => t.name === this.ticker);
     }
   },
 
@@ -127,32 +112,12 @@ export default {
       );
     },
 
-    async getAvailableTickers() {
-      this.availableTickersFromApi = await loadAvailableTickers();
-    },
-
     showTickerDuplicateError() {
       this.isTickerDuplicateError = true;
     },
 
     resetTickerDuplicateError() {
       this.isTickerDuplicateError = false;
-    },
-
-    searchInAvailableTickers() {
-      this.resetTickerDuplicateError();
-
-      if (this.ticker) {
-        this.recomendedTickers = this.availableTickersFromApi
-          .filter((item) => {
-            if (item.fullName.toLowerCase().includes(this.ticker.toLowerCase())) {
-              return item.symbol;
-            }
-          })
-          .slice(0, 4);
-      } else {
-        this.recomendedTickers = [];
-      }
     },
 
     subscribeToTickers() {
@@ -180,12 +145,6 @@ export default {
       }
     },
 
-    addTickerFromRecomended(tickerName) {
-      this.ticker = tickerName.toUpperCase();
-
-      this.add();
-    },
-
     formatPrice(price) {
       if (typeof price === 'string') {
         return price;
@@ -207,25 +166,28 @@ export default {
       });
     },
 
-    add() {
-      if (this.ticker) {
-        if (!this.isTickerAlreadyAdded) {
-          const currentTicker = {
-            name: this.ticker.toUpperCase(),
-            price: '-'
-          };
+    add(tickerName) {
+      if (tickerName) {
+        this.ticker = tickerName;
 
-          this.tickers = [...this.tickers, currentTicker];
-          subscribeToTicker(currentTicker.name, (newPrice) => {
-            this.updateTicker(currentTicker.name, newPrice);
-          });
-          this.recomendedTickers = [];
-          this.resetTickerDuplicateError();
-
-          this.ticker = '';
-        } else {
+        if (this.isTickerAlreadyAdded) {
           this.showTickerDuplicateError();
+          return;
         }
+
+        this.resetTickerDuplicateError();
+
+        const currentTicker = {
+          name: tickerName,
+          price: '-'
+        };
+
+        this.tickers = [...this.tickers, currentTicker];
+        subscribeToTicker(currentTicker.name, (newPrice) => {
+          this.updateTicker(currentTicker.name, newPrice);
+        });
+
+        this.ticker = '';
       }
     },
 
@@ -322,55 +284,11 @@ export default {
     </div> -->
 
     <div class="container">
-      <section>
-        <div class="flex">
-          <div class="max-w-xs">
-            <label for="wallet" class="block text-sm font-medium text-gray-700">Тикер</label>
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                v-model="ticker"
-                @keydown.enter="add"
-                @input="searchInAvailableTickers"
-                type="text"
-                name="wallet"
-                id="wallet"
-                class="px-2 py-1 block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                placeholder="Например DOGE"
-              />
-            </div>
-
-            <!-- Badge Container -->
-            <div
-              v-if="recomendedTickers.length"
-              class="flex bg-white shadow-md p-1 rounded-md flex-wrap"
-            >
-              <span
-                v-for="recomendedTicker in recomendedTickers"
-                :key="recomendedTicker.symbol"
-                @click="addTickerFromRecomended(recomendedTicker.symbol)"
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                {{ recomendedTicker.symbol }}
-              </span>
-            </div>
-
-            <!-- Error Message -->
-            <div v-if="isTickerDuplicateError" class="text-sm text-red-600">
-              Такой тикер уже добавлен
-            </div>
-          </div>
-        </div>
-        <button
-          @click="add"
-          type="button"
-          class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-        >
-          <!-- Heroicon name: solid/mail -->
-          <plus-sign-icon-component />
-          Добавить
-        </button>
-      </section>
-
+      <add-ticker-component
+        :isTickerDuplicateError="isTickerDuplicateError"
+        @add-ticker="add"
+        @reset-duplicate-error="resetTickerDuplicateError"
+      />
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4" />
         <div>

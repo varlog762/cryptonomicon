@@ -13,12 +13,17 @@ sharedWorker.port.addEventListener('message', (e) => {
     INFO: errorInfo,
     PARAMETER: param
   } = JSON.parse(e.data);
+
   let newPrice = price;
   let currency = fromSymbol;
+
   if (type === C.BAD_RESPONSE_TYPE) {
     newPrice = '-';
     currency = param.split('~').at(2);
+
     if (errorInfo.includes('pair')) {
+      changeUsdToUsdt(currency);
+
       const removeUsdSubscribeMessage = createMessageToWebSocket(
         C.REMOVE_SUBSCRIBE_ACTION,
         currency,
@@ -60,10 +65,21 @@ const getMapKeyFromTickerName = (tickerName) => {
     .at(0);
 };
 
+const createTickersHandlersKey = (firstCurrency, secondCurrency) => ({
+  [firstCurrency]: secondCurrency
+});
+
+const changeUsdToUsdt = (tickerName) => {
+  const currencyPair = getMapKeyFromTickerName(tickerName);
+  const handlers = tickersHandlers.get(currencyPair);
+  tickersHandlers.delete(currencyPair);
+
+  const updatedCurrencyPair = createTickersHandlersKey(tickerName, C.USDT);
+  tickersHandlers.set(updatedCurrencyPair, handlers);
+};
+
 export const subscribeToTicker = (tickerName, cb) => {
-  const currencyPair = {
-    [tickerName]: C.USD
-  };
+  const currencyPair = createTickersHandlersKey(tickerName, C.USD);
 
   const subscribers = tickersHandlers.get(currencyPair) || [];
   tickersHandlers.set(currencyPair, [...subscribers, cb]);
