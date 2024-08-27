@@ -69,6 +69,13 @@ export default {
     }
   },
 
+  emits: {
+    addTicker: (tickerName) => {
+      return typeof tickerName === 'string';
+    },
+    resetDuplicateError: null
+  },
+
   methods: {
     async getAvailableTickers() {
       this.availableTickersFromApi = await loadAvailableTickers();
@@ -76,7 +83,7 @@ export default {
 
     add() {
       if (this.ticker) {
-        this.$emit('add-ticker', this.ticker.toUpperCase());
+        this.$emit('addTicker', this.ticker.toUpperCase());
 
         setTimeout(() => {
           if (!this.isTickerDuplicateError) {
@@ -94,7 +101,7 @@ export default {
     },
 
     searchInAvailableTickers() {
-      this.$emit('reset-duplicate-error');
+      this.$emit('resetDuplicateError');
 
       if (this.ticker) {
         this.recomendedTickers = this.availableTickersFromApi
