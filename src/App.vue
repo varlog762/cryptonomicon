@@ -3,7 +3,7 @@ import '@/services/connectToWebSocket';
 import { subscribeToTicker, unsubscribeFromTicker } from './services/updatePricesService';
 
 import AddTickerComponent from './components/AddTickerComponent.vue';
-import CloseButtonIconComponent from './components/CloseButtonIconComponent.vue';
+import GraphComponent from './components/GraphComponent.vue';
 import TrashIconComponent from './components/TrashIconComponent.vue';
 
 export default {
@@ -23,7 +23,7 @@ export default {
 
   components: {
     AddTickerComponent,
-    CloseButtonIconComponent,
+    GraphComponent,
     TrashIconComponent
   },
 
@@ -35,8 +35,6 @@ export default {
       tickers: [],
 
       selectedTicker: null,
-      graph: [],
-      maxGraphElements: 3,
       page: 1,
 
       isTickerDuplicateError: false
@@ -44,8 +42,6 @@ export default {
   },
   mounted() {
     this.loadTickersFromLocalStorage();
-
-    window.addEventListener('resize', this.calculateMaxGraphElements);
 
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
 
@@ -56,10 +52,6 @@ export default {
     if (windowData.page) {
       this.page = windowData.page;
     }
-  },
-
-  beforeUnmount() {
-    window.removeEventListener('resize', this.calculateMaxGraphElements);
   },
 
   computed: {
@@ -86,32 +78,12 @@ export default {
     hasNextPage() {
       return this.filteredTickers.length > this.endTickerIdx;
     },
-    normalizeGraph() {
-      const maxValue = Math.max(...this.graph);
-      const minValue = Math.min(...this.graph);
-
-      if (maxValue === minValue) {
-        return this.graph.map(() => 50);
-      }
-
-      return this.graph.map((price) => 5 + ((price - minValue) * 95) / (maxValue - minValue));
-    },
     isTickerAlreadyAdded() {
       return this.tickers.some((t) => t.name === this.ticker);
     }
   },
 
   methods: {
-    calculateMaxGraphElements() {
-      if (!this.$refs.graph || !this.$refs.graphElement[0]) {
-        return;
-      }
-
-      this.maxGraphElements = Math.floor(
-        this.$refs.graph.clientWidth / this.$refs.graphElement[0].offsetWidth
-      );
-    },
-
     showTickerDuplicateError() {
       this.isTickerDuplicateError = true;
     },
@@ -156,11 +128,9 @@ export default {
     updateTicker(tickerName, newPrice) {
       const filteredTickers = this.tickers.filter((t) => t.name === tickerName);
       filteredTickers.forEach((t) => {
-        if (t === this.selectedTicker && typeof newPrice === 'number') {
-          this.graph.push(newPrice);
-
-          this.correctGraphElementsCount();
-        }
+        // if (t === this.selectedTicker && typeof newPrice === 'number') {
+        //   true;
+        // }
 
         t.price = newPrice;
       });
@@ -195,7 +165,7 @@ export default {
       this.selectedTicker = ticker;
     },
 
-    hideGraphWhenTickerWasDeleted(ticker) {
+    resetSelectedTickerAfterDelete(ticker) {
       if (this.selectedTicker && ticker.name === this.selectedTicker.name) {
         this.selectedTicker = null;
       }
@@ -210,42 +180,20 @@ export default {
 
       unsubscribeFromTicker(tickerToRemove.name);
 
-      this.hideGraphWhenTickerWasDeleted(tickerToRemove);
+      this.resetSelectedTickerAfterDelete(tickerToRemove);
     },
 
     isValidPrice(ticker) {
       return typeof ticker.price === 'number';
-    },
-
-    correctGraphElementsCount() {
-      if (this.graph.length > this.maxGraphElements) {
-        const startIdx = this.graph.length - this.maxGraphElements;
-
-        this.graph = this.graph.slice(startIdx);
-      }
     }
   },
 
   watch: {
-    graph() {
-      this.$nextTick().then(() => {
-        this.calculateMaxGraphElements();
-      });
-    },
-
-    maxGraphElements() {
-      this.correctGraphElementsCount();
-    },
-
     tickers() {
       if (localStorage) {
         const tickersCollection = this.tickers.map((ticker) => ticker.name);
         localStorage.setItem('tickersList', JSON.stringify(tickersCollection));
       }
-    },
-
-    selectedTicker() {
-      this.graph = [];
     },
 
     filter() {
@@ -338,23 +286,11 @@ export default {
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section v-if="selectedTicker" class="relative">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectedTicker.name }} - USD
-        </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64" ref="graph">
-          <div
-            ref="graphElement"
-            v-for="(bar, idx) in normalizeGraph"
-            :key="idx"
-            :style="{ height: `${bar}%` }"
-            class="bg-purple-800 border w-10 shrink-0"
-          ></div>
-        </div>
-        <button @click="selectedTicker = null" type="button" class="absolute top-0 right-0">
-          <close-button-icon-component />
-        </button>
-      </section>
+      <graph-component
+        v-if="selectedTicker"
+        :tickerName="selectedTicker.name"
+        @graph-was-closed="selectedTicker = null"
+      />
     </div>
   </div>
 </template>
