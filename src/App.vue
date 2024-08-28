@@ -288,7 +288,8 @@ export default {
       </template>
       <graph-component
         v-if="selectedTicker"
-        :tickerName="selectedTicker.name"
+        :ticker="selectedTicker.name"
+        :new-price="selectedTicker.price"
         @graph-was-closed="selectedTicker = null"
       />
     </div>

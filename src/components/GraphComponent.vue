@@ -1,6 +1,6 @@
 <template>
   <section class="relative">
-    <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ tickerName }} - USD</h3>
+    <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ ticker }} - USD</h3>
     <div class="flex items-end border-gray-600 border-b border-l h-64" ref="graph">
       <div
         ref="graphElement"
@@ -40,8 +40,12 @@ export default {
   },
 
   props: {
-    tickerName: {
+    ticker: {
       type: String,
+      required: true
+    },
+    newPrice: {
+      type: Number,
       required: true
     }
   },
@@ -84,8 +88,12 @@ export default {
   },
 
   watch: {
-    tickerName() {
+    ticker() {
       this.graph = [];
+    },
+
+    newPrice() {
+      this.graph.push(this.newPrice);
     },
 
     graph() {
@@ -95,6 +103,7 @@ export default {
     },
 
     maxGraphElements() {
+      console.log(this.maxGraphElements);
       this.correctGraphElementsCount();
     }
   }
