@@ -128,10 +128,6 @@ export default {
     updateTicker(tickerName, newPrice) {
       const filteredTickers = this.tickers.filter((t) => t.name === tickerName);
       filteredTickers.forEach((t) => {
-        // if (t === this.selectedTicker && typeof newPrice === 'number') {
-        //   true;
-        // }
-
         t.price = newPrice;
       });
     },

@@ -28,11 +28,11 @@ export default {
   },
 
   mounted() {
-    window.addEventListener('resize', this.calculateMaxGraphElements);
+    window.addEventListener('resize', this.correctGraphElementsCount);
   },
 
   beforeUnmount() {
-    window.removeEventListener('resize', this.calculateMaxGraphElements);
+    window.removeEventListener('resize', this.correctGraphElementsCount);
   },
 
   components: {
@@ -79,6 +79,8 @@ export default {
     },
 
     correctGraphElementsCount() {
+      this.calculateMaxGraphElements();
+
       if (this.graph.length > this.maxGraphElements) {
         const startIdx = this.graph.length - this.maxGraphElements;
 
@@ -93,18 +95,13 @@ export default {
     },
 
     newPrice() {
-      this.graph.push(this.newPrice);
+      this.graph = [...this.graph, this.newPrice];
     },
 
     graph() {
       this.$nextTick().then(() => {
-        this.calculateMaxGraphElements();
+        this.correctGraphElementsCount();
       });
-    },
-
-    maxGraphElements() {
-      console.log(this.maxGraphElements);
-      this.correctGraphElementsCount();
     }
   }
 };
