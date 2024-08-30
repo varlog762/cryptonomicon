@@ -1,25 +1,65 @@
 <template>
-  <div class="backdrop" v-if="isOpen">
+  <div class="backdrop" v-if="isOpen" @click.self="closePopup">
     <div class="popup">
       <h1>Attention!</h1>
       <hr />
       <slot></slot>
       <hr />
       <div class="footer">
-        <button>Cancel</button>
-        &nbsp;
-        <button>Ok</button>
+        <slot name="controls" :confirmFn="confirmPopup">
+          <button
+            @click="$emit('close')"
+            class="bg-slate-200 border-1 p-1 px-2 mt-2 mr-2 rounded-md"
+          >
+            Cancel
+          </button>
+          &nbsp;
+          <button @click="$emit('ok')" class="bg-slate-200 border-1 p-1 px-2 mt-2 mr-2 rounded-md">
+            Ok
+          </button>
+        </slot>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import C from '@/constants/constants';
+
 export default {
   props: {
     isOpen: {
       type: Boolean,
       required: true
+    }
+  },
+
+  emits: {
+    ok: null,
+    close: null
+  },
+
+  mounted() {
+    document.addEventListener('keydown', this.closePopupWhenEscapeButtonPressed);
+  },
+
+  beforeUnmount() {
+    document.removeEventListener('keydown', this.closePopupWhenEscapeButtonPressed);
+  },
+
+  methods: {
+    closePopupWhenEscapeButtonPressed(e) {
+      if (e.key === C.ESCAPE_KEY) {
+        this.closePopup();
+      }
+    },
+
+    closePopup() {
+      this.$emit('close');
+    },
+
+    confirmPopup() {
+      this.$emit('ok');
     }
   }
 };
@@ -27,10 +67,10 @@ export default {
 
 <style>
 .popup {
-  top: 50px;
+  top: 50%;
   padding: 20px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   position: fixed;
   z-index: 101;
   background-color: white;

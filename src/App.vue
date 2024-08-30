@@ -46,9 +46,11 @@ export default {
       isTickerDuplicateError: false,
 
       // popup testing
-      isPopupOpen: false
+      isPopupOpen: false,
+      confirmation: ''
     };
   },
+  CONFIRMATION_TEXT: 'CONFIRM',
   mounted() {
     this.loadTickersFromLocalStorage();
 
@@ -64,6 +66,12 @@ export default {
   },
 
   computed: {
+    // popup testing
+    isConfirmationCorrect() {
+      return this.confirmation === this.$options.CONFIRMATION_TEXT;
+    },
+    // popup testing
+
     pageStateOptions() {
       return {
         filter: this.filter,
@@ -95,7 +103,13 @@ export default {
   methods: {
     // popup testing
     popupConfirmed() {
+      this.isPopupOpen = false;
       alert('Confirmed!');
+    },
+
+    openPopup() {
+      this.confirmation = '';
+      this.isPopupOpen = true;
     },
     // popup testing
 
@@ -305,12 +319,22 @@ export default {
       />
       <!-- popup testing start-->
       <hr />
-      <button @click="isPopupOpen = true" class="popup-open-btn">Open popup</button>
+      <button @click="openPopup" class="popup-open-btn">Open popup</button>
       <popup-component :is-open="isPopupOpen" @ok="popupConfirmed" @close="isPopupOpen = false"
-        >Lorem ipsum, dolor sit amet consectetur adipisicing elit. Modi delectus dolor labore! Nobis
-        numquam eius laudantium perferendis vitae, consectetur temporibus nulla dolorem nemo alias
-        totam porro rerum exercitationem? Fugiat, quibusdam.</popup-component
-      >
+        >Lorem ipsum, dolor sit amet consectetur adipisicing elit. Modi delectus dolor labore!
+        <template #controls="{ confirmFn }"
+          >Напишите
+          <input v-model="confirmation" type="text" :placeholder="$options.CONFIRMATION_TEXT" />
+          &nbsp;
+          <button
+            :class="{ 'cursor-not-allowed': !isConfirmationCorrect }"
+            :disabled="!isConfirmationCorrect"
+            @click="confirmFn"
+          >
+            Ok
+          </button>
+        </template>
+      </popup-component>
       <!-- popup testing end -->
     </div>
   </div>

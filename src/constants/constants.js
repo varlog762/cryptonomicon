@@ -7,5 +7,6 @@ export default {
   BASE_URL_WS: 'wss://streamer.cryptocompare.com',
   BASE_URL_API: 'https://min-api.cryptocompare.com',
   USD: 'USD',
-  USDT: 'USDT'
+  USDT: 'USDT',
+  ESCAPE_KEY: 'Escape'
 };
