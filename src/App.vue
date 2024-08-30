@@ -6,6 +6,9 @@ import AddTickerComponent from './components/AddTickerComponent.vue';
 import GraphComponent from './components/GraphComponent.vue';
 import TrashIconComponent from './components/TrashIconComponent.vue';
 
+// popup testing
+import PopupComponent from './components/PopupComponent.vue';
+
 export default {
   /**
    * Критерии оценки критичности проблемы:
@@ -24,7 +27,10 @@ export default {
   components: {
     AddTickerComponent,
     GraphComponent,
-    TrashIconComponent
+    TrashIconComponent,
+
+    // popup testing
+    PopupComponent
   },
 
   data() {
@@ -37,7 +43,10 @@ export default {
       selectedTicker: null,
       page: 1,
 
-      isTickerDuplicateError: false
+      isTickerDuplicateError: false,
+
+      // popup testing
+      isPopupOpen: false
     };
   },
   mounted() {
@@ -84,6 +93,12 @@ export default {
   },
 
   methods: {
+    // popup testing
+    popupConfirmed() {
+      alert('Confirmed!');
+    },
+    // popup testing
+
     showTickerDuplicateError() {
       this.isTickerDuplicateError = true;
     },
@@ -288,6 +303,24 @@ export default {
         :new-price="selectedTicker.price"
         @graph-was-closed="selectedTicker = null"
       />
+      <!-- popup testing start-->
+      <hr />
+      <button @click="isPopupOpen = true" class="popup-open-btn">Open popup</button>
+      <popup-component :is-open="isPopupOpen" @ok="popupConfirmed" @close="isPopupOpen = false"
+        >Lorem ipsum, dolor sit amet consectetur adipisicing elit. Modi delectus dolor labore! Nobis
+        numquam eius laudantium perferendis vitae, consectetur temporibus nulla dolorem nemo alias
+        totam porro rerum exercitationem? Fugiat, quibusdam.</popup-component
+      >
+      <!-- popup testing end -->
     </div>
   </div>
 </template>
+
+<style>
+.popup-open-btn {
+  border: 1px solid black;
+  border-radius: 5px;
+  background-color: #fff;
+  padding: 2px 4px;
+}
+</style>
